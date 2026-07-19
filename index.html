@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spectrum 3D Printing — Ideas, printed layer by layer</title>
+<style>
+  :root {
+    --navy: #17255c;
+    --ink: #1f2a44;
+    --muted: #5b6478;
+    --bg: #f7f8fb;
+    --red: #e53935;
+    --orange: #fb8c00;
+    --yellow: #fdd835;
+    --green: #43a047;
+    --blue: #1e88e5;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: auto; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    overflow-x: clip; /* full-bleed marquee must not widen the page */
+  }
+
+  /* ---------- Nav ---------- */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 40px;
+    backdrop-filter: blur(10px);
+    background: rgba(247, 248, 251, 0.75);
+    border-bottom: 1px solid rgba(23, 37, 92, 0.06);
+  }
+  .nav-brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+  .nav-brand img { height: 44px; width: 44px; object-fit: cover; object-position: top; border-radius: 10px; }
+  .nav-brand span { font-weight: 700; font-size: 17px; color: var(--navy); letter-spacing: 0.02em; }
+  .nav-links { display: flex; gap: 28px; align-items: center; }
+  .nav-links a { text-decoration: none; color: var(--muted); font-size: 14.5px; font-weight: 500; transition: color .15s; }
+  .nav-links a:hover { color: var(--navy); }
+  .nav-cta {
+    background: var(--navy); color: #fff !important;
+    padding: 9px 18px; border-radius: 8px; font-weight: 600 !important;
+  }
+  @media (max-width: 720px) { .nav-links a:not(.nav-cta) { display: none; } }
+
+  /* ---------- Scroll-driven hero ---------- */
+  #hero-track { height: 420vh; position: relative; }
+  #hero-stage {
+    position: sticky; top: 0;
+    height: 100vh; width: 100%;
+    overflow: hidden;
+  }
+  #scene { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+  .overlay {
+    position: absolute;
+    z-index: 10;
+    pointer-events: none;
+    transition: none;
+  }
+  .overlay .pill {
+    display: inline-block;
+    font-size: 12.5px; font-weight: 700; letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--navy);
+    background: rgba(30, 136, 229, 0.1);
+    border: 1px solid rgba(30, 136, 229, 0.25);
+    padding: 6px 14px; border-radius: 999px;
+    margin-bottom: 20px;
+  }
+  .overlay h1 {
+    font-size: clamp(38px, 5vw, 64px);
+    line-height: 1.06;
+    letter-spacing: -0.02em;
+    color: var(--navy);
+    margin-bottom: 18px;
+  }
+  .overlay h1 .grad {
+    background: linear-gradient(90deg, var(--red), var(--orange), var(--yellow), var(--green), var(--blue));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .overlay p { font-size: clamp(16px, 1.4vw, 19px); color: var(--muted); max-width: 46ch; line-height: 1.55; margin-bottom: 28px; }
+  .btn-row { display: flex; gap: 14px; pointer-events: auto; }
+  .btn {
+    display: inline-block; text-decoration: none;
+    font-weight: 600; font-size: 15.5px;
+    padding: 13px 26px; border-radius: 10px;
+    transition: transform .15s, box-shadow .15s;
+  }
+  .btn:hover { transform: translateY(-2px); }
+  .btn-primary { background: var(--navy); color: #fff; box-shadow: 0 8px 24px rgba(23, 37, 92, 0.25); }
+  .btn-ghost { color: var(--navy); border: 1.5px solid rgba(23, 37, 92, 0.25); background: rgba(255,255,255,0.6); }
+
+  #ov-intro { left: 6vw; top: 50%; transform: translateY(-50%); max-width: 620px; }
+  #ov-print {
+    left: 6vw; top: 15vh; max-width: 460px;
+  }
+  #ov-print h2, #ov-final h2 {
+    font-size: clamp(26px, 3vw, 40px);
+    color: var(--navy); letter-spacing: -0.01em; line-height: 1.15; margin-bottom: 10px;
+  }
+  #ov-print p, #ov-final p { font-size: 16px; color: var(--muted); line-height: 1.5; }
+  #ov-final {
+    left: 50%; top: 17vh; transform: translateX(-50%);
+    text-align: center; max-width: 560px;
+  }
+  #ov-final .btn-row { justify-content: center; margin-top: 22px; }
+
+  #scroll-hint {
+    position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%);
+    z-index: 10; display: flex; flex-direction: column; align-items: center; gap: 8px;
+    color: var(--muted); font-size: 12.5px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;
+  }
+  #scroll-hint .wheel {
+    width: 22px; height: 34px; border: 2px solid rgba(23,37,92,0.35); border-radius: 12px;
+    position: relative;
+  }
+  #scroll-hint .wheel::after {
+    content: ''; position: absolute; left: 50%; top: 6px; transform: translateX(-50%);
+    width: 4px; height: 7px; border-radius: 2px; background: var(--blue);
+    animation: wheel 1.6s ease-in-out infinite;
+  }
+  @keyframes wheel { 0%,100% { top: 6px; opacity: 1; } 70% { top: 17px; opacity: 0.2; } }
+
+  /* progress bar */
+  #build-progress {
+    position: absolute; right: 6vw; top: 50%; transform: translateY(-50%);
+    z-index: 10; display: flex; flex-direction: column; align-items: center; gap: 12px;
+  }
+  #build-progress .bar {
+    width: 4px; height: 180px; border-radius: 2px;
+    background: rgba(23,37,92,0.08); position: relative; overflow: hidden;
+  }
+  #build-progress .fill {
+    position: absolute; bottom: 0; left: 0; width: 100%;
+    background: linear-gradient(0deg, var(--red), var(--orange), var(--yellow), var(--green), var(--blue));
+    height: 0%;
+  }
+  #build-progress .label { font-size: 11.5px; font-weight: 700; color: var(--muted); letter-spacing: 0.1em; writing-mode: vertical-rl; }
+
+  /* ---------- Content sections ---------- */
+  section.content { padding: 110px 6vw; max-width: 1200px; margin: 0 auto; }
+  section.content h2 { font-size: clamp(28px, 3.2vw, 44px); color: var(--navy); letter-spacing: -0.02em; margin-bottom: 14px; }
+  section.content > p { color: var(--muted); font-size: 17px; max-width: 60ch; line-height: 1.6; margin-bottom: 44px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 22px; }
+  .card {
+    background: #fff; border: 1px solid rgba(23,37,92,0.07); border-radius: 16px;
+    padding: 28px; box-shadow: 0 4px 18px rgba(23,37,92,0.05);
+  }
+  .card .dot { width: 38px; height: 38px; border-radius: 10px; margin-bottom: 16px; }
+  .card h3 { font-size: 19px; color: var(--navy); margin-bottom: 8px; }
+  .card p { font-size: 15px; color: var(--muted); line-height: 1.55; }
+
+  /* ---------- Showcase marquee + socials ---------- */
+  #prints { text-align: center; }
+  #prints > p { margin-left: auto; margin-right: auto; }
+  .mq-wrap {
+    margin: 6px calc(50% - 50vw) 40px; padding: 30px 0 20px;
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
+  }
+  .mq-track { display: flex; width: max-content; animation: drift 70s linear infinite; }
+  .mq-wrap:hover .mq-track { animation-play-state: paused; }
+  .mq-set { display: flex; }
+  @keyframes drift { to { transform: translateX(-50%); } }
+  .polaroid {
+    position: relative; flex-shrink: 0; width: 252px;
+    background: #fff; border: 1px solid rgba(23,37,92,0.06); border-radius: 6px;
+    padding: 12px 12px 4px; margin-right: 40px;
+    box-shadow: 0 10px 26px rgba(23,37,92,0.13);
+    transition: transform .25s ease, box-shadow .25s ease;
+  }
+  .polaroid img { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; display: block; border-radius: 3px; }
+  .polaroid img.crop-bottom { object-position: center bottom; }
+  .polaroid img.crop-top { object-position: center top; }
+  .polaroid figcaption {
+    font-family: 'Segoe Print', 'Bradley Hand', 'Marker Felt', cursive;
+    text-align: center; color: var(--ink); font-size: 15px; padding: 10px 4px 8px;
+  }
+  .polaroid::before {
+    content: ''; position: absolute; top: -13px; left: 50%; width: 92px; height: 27px;
+    background: rgba(250, 232, 150, 0.65); transform: translateX(-50%) rotate(-3deg);
+    box-shadow: 0 1px 3px rgba(23,37,92,0.08);
+  }
+  .mq-set .polaroid:nth-child(5n+1) { transform: rotate(-2.4deg) translateY(8px); }
+  .mq-set .polaroid:nth-child(5n+2) { transform: rotate(1.8deg) translateY(-6px); }
+  .mq-set .polaroid:nth-child(5n+2)::before { transform: translateX(-50%) rotate(4deg); }
+  .mq-set .polaroid:nth-child(5n+3) { transform: rotate(-1.2deg) translateY(12px); }
+  .mq-set .polaroid:nth-child(5n+4) { transform: rotate(2.6deg) translateY(-4px); }
+  .mq-set .polaroid:nth-child(5n+4)::before { transform: translateX(-50%) rotate(-5deg); }
+  .mq-set .polaroid:nth-child(5n)   { transform: rotate(-2deg) translateY(4px); }
+  .mq-set .polaroid:hover {
+    transform: rotate(0deg) translateY(-6px) scale(1.05);
+    box-shadow: 0 18px 40px rgba(23,37,92,0.2); z-index: 2;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .mq-track { animation: none; }
+    .mq-wrap { overflow-x: auto; }
+    .mq-set[aria-hidden="true"] { display: none; }
+  }
+  .follow-lead { font-size: 15px; font-weight: 600; color: var(--muted); margin-bottom: 18px; }
+  .social-row { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+  .social-btn {
+    display: inline-flex; align-items: center; gap: 10px; text-decoration: none;
+    font-weight: 600; font-size: 15px; padding: 12px 22px; border-radius: 999px;
+    color: #fff; transition: transform .15s, box-shadow .15s;
+  }
+  .social-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(23,37,92,0.2); }
+  .social-btn.tiktok { background: #111; }
+  .social-btn.insta { background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); }
+  .social-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+
+  footer {
+    border-top: 1px solid rgba(23,37,92,0.08);
+    padding: 36px 6vw; text-align: center; color: var(--muted); font-size: 14px;
+  }
+
+  @media (max-width: 720px) {
+    #build-progress { display: none; }
+    #ov-intro { top: 11vh; bottom: auto; }
+    #ov-print { top: 12vh; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-brand" href="#">
+    <img src="Assets/Spectrum 3d Printing Logo.png" alt="Spectrum 3D Printing logo">
+    <span>Spectrum 3D Printing</span>
+  </a>
+  <div class="nav-links">
+    <a href="#services">Services</a>
+    <a href="#prints">Our prints</a>
+    <a href="#contact">Contact</a>
+    <a class="nav-cta" href="#contact">Get a quote</a>
+  </div>
+</nav>
+
+<div id="hero-track">
+  <div id="hero-stage">
+    <canvas id="scene"></canvas>
+
+    <div class="overlay" id="ov-intro">
+      <span class="pill">Custom 3D prints · Made to order</span>
+      <h1>Ideas, printed <span class="grad">layer by layer</span>.</h1>
+      <p>From one-off ideas to small custom batches, Spectrum turns your idea into a vibrant, real-world piece — printed with care from high-quality materials.</p>
+      <div class="btn-row">
+        <a class="btn btn-primary" href="#contact">Start your print</a>
+        <a class="btn btn-ghost" href="#prints">See what we make</a>
+      </div>
+    </div>
+
+    <div class="overlay" id="ov-print">
+      <h2>Watch precision take shape.</h2>
+      <p>Every part is built one micro-layer at a time — tuned for strength, finish, and color that pops.</p>
+    </div>
+
+    <div class="overlay" id="ov-final">
+      <h2>From idea to finished piece in days, not weeks.</h2>
+      <p>Send us your idea and we handle the rest.</p>
+      <div class="btn-row">
+        <a class="btn btn-primary" href="#contact">Get an instant quote</a>
+      </div>
+    </div>
+
+    <div id="scroll-hint">
+      <div class="wheel"></div>
+      <span>Scroll to build</span>
+    </div>
+
+    <div id="build-progress">
+      <div class="bar"><div class="fill" id="progress-fill"></div></div>
+      <span class="label">BUILD PROGRESS</span>
+    </div>
+  </div>
+</div>
+
+<section class="content" id="services">
+  <h2>What we print</h2>
+  <p>Keychains, fan gear, custom signs, gifts, replacement parts — if you can dream it up, it can come off the plate. In the full spectrum of colors.</p>
+  <div class="cards">
+    <div class="card">
+      <div class="dot" style="background: linear-gradient(135deg, var(--red), var(--orange));"></div>
+      <h3>One-of-a-kind pieces</h3>
+      <p>Have an idea in your head? We'll help turn it into something you can hold — personalized and made just for you.</p>
+    </div>
+    <div class="card">
+      <div class="dot" style="background: linear-gradient(135deg, var(--yellow), var(--green));"></div>
+      <h3>Small-batch orders</h3>
+      <p>Keychains for the whole team or party favors for the whole crew — consistent quality across every piece of your order.</p>
+    </div>
+    <div class="card">
+      <div class="dot" style="background: linear-gradient(135deg, var(--green), var(--blue));"></div>
+      <h3>Care in every layer</h3>
+      <p>Every print is dialed in before it starts — orientation, supports, and tolerances — so the finished piece looks as good as the idea.</p>
+    </div>
+  </div>
+</section>
+
+<section class="content" id="prints">
+  <h2>Fresh off the plate</h2>
+  <p>A few favorites from recent orders — and there's plenty more where these came from. Follow along for builds, timelapses, and new prints as they happen.</p>
+  <div class="mq-wrap">
+    <div class="mq-track">
+      <div class="mq-set">
+        <figure class="polaroid"><img src="Assets/team chain.png" alt="3D printed Cowboys star fan chain"><figcaption>Cowboys fan chain</figcaption></figure>
+        <figure class="polaroid"><img class="crop-bottom" src="Assets/Raider Chain.png" alt="3D printed Raiders helmet fan chain"><figcaption>Raiders game-day chain</figcaption></figure>
+        <figure class="polaroid"><img src="Assets/keychains.png" alt="Batch of custom 3D printed logo keychains"><figcaption>Keychains, by the batch</figcaption></figure>
+        <figure class="polaroid"><img class="crop-top" src="Assets/Mini Street Sign.png" alt="Miniature personalized 3D printed street sign"><figcaption>Sunset Ave, scaled down</figcaption></figure>
+        <figure class="polaroid"><img src="Assets/Water Cooler.png" alt="3D printed Seahawks mini water cooler"><figcaption>Game-day cooler</figcaption></figure>
+      </div>
+      <div class="mq-set" aria-hidden="true">
+        <figure class="polaroid"><img src="Assets/team chain.png" alt=""><figcaption>Cowboys fan chain</figcaption></figure>
+        <figure class="polaroid"><img class="crop-bottom" src="Assets/Raider Chain.png" alt=""><figcaption>Raiders game-day chain</figcaption></figure>
+        <figure class="polaroid"><img src="Assets/keychains.png" alt=""><figcaption>Keychains, by the batch</figcaption></figure>
+        <figure class="polaroid"><img class="crop-top" src="Assets/Mini Street Sign.png" alt=""><figcaption>Sunset Ave, scaled down</figcaption></figure>
+        <figure class="polaroid"><img src="Assets/Water Cooler.png" alt=""><figcaption>Game-day cooler</figcaption></figure>
+      </div>
+    </div>
+  </div>
+  <p class="follow-lead">Catch every build, timelapse, and reveal:</p>
+  <div class="social-row">
+    <a class="social-btn tiktok" href="https://www.tiktok.com/@spectrumprinting530" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.53.02C13.84 0 15.14.01 16.44 0c.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
+      @spectrumprinting530
+    </a>
+    <a class="social-btn insta" href="https://www.instagram.com/spectrumprinting530/" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="19" rx="5.5"/><circle cx="12" cy="12" r="4.3"/><circle cx="17.4" cy="6.6" r="1.2" fill="currentColor" stroke="none"/></svg>
+      @spectrumprinting530
+    </a>
+  </div>
+</section>
+
+<section class="content" id="materials">
+  <h2>Only high-quality materials</h2>
+  <p>Every print starts with premium, trusted material — chosen for strength, finish, and color that lasts. Tell us how your piece will be used and we'll match the right material to the job.</p>
+</section>
+
+<section class="content" id="contact">
+  <h2>Get a quote</h2>
+  <p>Have an idea or a file ready to print? Send it over and we'll get back to you within a day.</p>
+  <a class="btn btn-primary" href="mailto:hello@spectrum3dprinting.com">hello@spectrum3dprinting.com</a>
+</section>
+
+<footer>© 2026 Spectrum 3D Printing. All rights reserved.</footer>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.166.1/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.166.1/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+
+/* ============================================================
+   Scene setup
+============================================================ */
+const canvas = document.getElementById('scene');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
+
+// Detect software rasterizers (SwiftShader/llvmpipe) and degrade gracefully.
+let softwareGL = false;
+try {
+  const gl = renderer.getContext();
+  const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+  const rname = dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : '';
+  softwareGL = /swiftshader|llvmpipe|software/i.test(rname);
+} catch (e) { /* ignore */ }
+
+renderer.setPixelRatio(softwareGL ? 0.55 : Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = !softwareGL;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+const FRAME_INTERVAL = softwareGL ? 100 : 0; // ms between frames when degraded
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.65));
+const hemi = new THREE.HemisphereLight(0xdde6ff, 0xf0e6d8, 0.5);
+scene.add(hemi);
+const key = new THREE.DirectionalLight(0xffffff, 1.6);
+key.position.set(5, 8, 6);
+key.castShadow = true;
+key.shadow.mapSize.set(1024, 1024);
+key.shadow.camera.left = -6; key.shadow.camera.right = 6;
+key.shadow.camera.top = 6; key.shadow.camera.bottom = -6;
+scene.add(key);
+const rim = new THREE.DirectionalLight(0xbdd7ff, 0.7);
+rim.position.set(-6, 4, -5);
+scene.add(rim);
+
+/* ============================================================
+   Color helpers — the logo's rainbow
+============================================================ */
+const RAINBOW = [0xe53935, 0xfb8c00, 0xfdd835, 0x43a047, 0x1e88e5].map(h => new THREE.Color(h));
+function rainbowAt(t) {
+  t = Math.min(0.9999, Math.max(0, t));
+  const f = t * (RAINBOW.length - 1);
+  const i = Math.floor(f);
+  return RAINBOW[i].clone().lerp(RAINBOW[i + 1], f - i);
+}
+
+/** Paint per-vertex colors on a geometry with a callback (localPos → THREE.Color). */
+function paintVertices(geom, fn) {
+  const pos = geom.attributes.position;
+  const colors = new Float32Array(pos.count * 3);
+  const v = new THREE.Vector3();
+  for (let i = 0; i < pos.count; i++) {
+    v.fromBufferAttribute(pos, i);
+    const c = fn(v);
+    colors[i * 3] = c.r; colors[i * 3 + 1] = c.g; colors[i * 3 + 2] = c.b;
+  }
+  geom.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+}
+
+function vertexMat(extra = {}) {
+  return new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.38, metalness: 0.05, ...extra });
+}
+
+/* ============================================================
+   The nozzle — procedural model of the logo mark
+============================================================ */
+const nozzle = new THREE.Group();
+scene.add(nozzle);
+
+// --- Top block: rounded slab with a rounded-rect hole, rainbow gradient ---
+function roundedRectShape(w, h, r) {
+  const s = new THREE.Shape();
+  s.moveTo(-w / 2 + r, -h / 2);
+  s.lineTo(w / 2 - r, -h / 2);  s.quadraticCurveTo(w / 2, -h / 2, w / 2, -h / 2 + r);
+  s.lineTo(w / 2, h / 2 - r);   s.quadraticCurveTo(w / 2, h / 2, w / 2 - r, h / 2);
+  s.lineTo(-w / 2 + r, h / 2);  s.quadraticCurveTo(-w / 2, h / 2, -w / 2, h / 2 - r);
+  s.lineTo(-w / 2, -h / 2 + r); s.quadraticCurveTo(-w / 2, -h / 2, -w / 2 + r, -h / 2);
+  return s;
+}
+const topShape = roundedRectShape(2.5, 2.5, 0.55);
+const holePath = roundedRectShape(1.15, 0.85, 0.28);
+topShape.holes.push(new THREE.Path(holePath.getPoints(24)));
+const topGeom = new THREE.ExtrudeGeometry(topShape, {
+  depth: 0.85, bevelEnabled: true, bevelThickness: 0.09, bevelSize: 0.09, bevelSegments: 4, curveSegments: 24
+});
+topGeom.rotateX(-Math.PI / 2); // extrusion now points up (y)
+topGeom.translate(0, -0.425, 0); // center vertically
+paintVertices(topGeom, (v) => {
+  // rainbow sweeps left→right like the logo, slightly darker underneath
+  const t = (v.x + 1.35) / 2.7;
+  const c = rainbowAt(t);
+  const shade = THREE.MathUtils.clamp((v.y + 0.5) / 1.0, 0, 1);
+  return c.lerp(new THREE.Color(0x000000), (1 - shade) * 0.18);
+});
+const topBlock = new THREE.Mesh(topGeom, vertexMat());
+topBlock.castShadow = true;
+
+// --- Blue stepped throat: two cylinders + cone tip ---
+function blueGrad(geom, yMin, yMax, lightTop = 0.62, lightBottom = 0.42) {
+  paintVertices(geom, (v) => {
+    const t = THREE.MathUtils.clamp((v.y - yMin) / (yMax - yMin), 0, 1);
+    return new THREE.Color().setHSL(0.575, 0.78, THREE.MathUtils.lerp(lightBottom, lightTop, t));
+  });
+}
+const step1Geom = new THREE.CylinderGeometry(0.72, 0.6, 0.5, 40);
+blueGrad(step1Geom, -0.25, 0.25, 0.6, 0.48);
+const step1 = new THREE.Mesh(step1Geom, vertexMat());
+step1.castShadow = true;
+
+const step2Geom = new THREE.CylinderGeometry(0.46, 0.36, 0.42, 40);
+blueGrad(step2Geom, -0.21, 0.21, 0.52, 0.4);
+const step2 = new THREE.Mesh(step2Geom, vertexMat());
+step2.castShadow = true;
+
+const tipGeom = new THREE.ConeGeometry(0.3, 0.62, 40);
+tipGeom.rotateZ(Math.PI); // apex down
+blueGrad(tipGeom, -0.31, 0.31, 0.42, 0.28);
+const tip = new THREE.Mesh(tipGeom, vertexMat());
+tip.castShadow = true;
+
+nozzle.add(topBlock, step1, step2, tip);
+
+/* Assembly targets (local to nozzle group) + exploded start states */
+const parts = [
+  { mesh: topBlock, to: new THREE.Vector3(0, 2.35, 0), from: new THREE.Vector3(-1.6, 4.3, -1.2), rot: new THREE.Euler(0.5, 0.9, 0.35), t0: 0.00, t1: 0.55 },
+  { mesh: step1,    to: new THREE.Vector3(0, 1.62, 0), from: new THREE.Vector3(2.3, 3.1, 1.0),   rot: new THREE.Euler(-0.7, 0.4, 0.9), t0: 0.15, t1: 0.68 },
+  { mesh: step2,    to: new THREE.Vector3(0, 1.18, 0), from: new THREE.Vector3(0.7, 1.1, 2.2),   rot: new THREE.Euler(0.6, -0.8, -0.6), t0: 0.30, t1: 0.80 },
+  { mesh: tip,      to: new THREE.Vector3(0, 0.68, 0), from: new THREE.Vector3(1.4, -0.1, -1.0), rot: new THREE.Euler(-1.0, 0.6, 0.3), t0: 0.45, t1: 1.00 },
+];
+// tip apex world y (within group): 0.68 - 0.31 = 0.37
+const TIP_APEX = 0.37;
+
+/* ============================================================
+   Build plate + printed part (layer stack)
+============================================================ */
+const PLATE_Y = -1.55;
+const plateGeom = new THREE.CylinderGeometry(2.1, 2.3, 0.16, 64);
+paintVertices(plateGeom, () => new THREE.Color(0x2a3a72));
+const plate = new THREE.Mesh(plateGeom, vertexMat({ roughness: 0.5, metalness: 0.35 }));
+plate.position.y = PLATE_Y - 0.08;
+plate.receiveShadow = true;
+scene.add(plate);
+
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(40, 40),
+  new THREE.ShadowMaterial({ opacity: 0.10 })
+);
+ground.rotation.x = -Math.PI / 2;
+ground.position.y = PLATE_Y - 0.17;
+ground.receiveShadow = true;
+scene.add(ground);
+
+// The printed part is the logo itself: a mini replica of the nozzle mark,
+// revealed bottom-up by a clipping plane as if being printed layer by layer.
+renderer.localClippingEnabled = true;
+const printPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), PLATE_Y);
+const MINI_SCALE = 0.6;
+const MINI_H = 1.55; // world-space height of the reveal travel
+const printGroup = new THREE.Group();
+scene.add(printGroup);
+for (const [geom, y] of [[topGeom, 2.35], [step1Geom, 1.62], [step2Geom, 1.18], [tipGeom, 0.68]]) {
+  const m = new THREE.Mesh(geom, vertexMat({ roughness: 0.45, clippingPlanes: [printPlane], clipShadows: true, side: THREE.DoubleSide }));
+  m.position.y = y;
+  m.castShadow = true;
+  printGroup.add(m);
+}
+printGroup.scale.setScalar(MINI_SCALE);
+// rest the mini logo's cone tip on the plate, just like the mark in the logo
+printGroup.position.y = PLATE_Y - TIP_APEX * MINI_SCALE;
+
+/* ============================================================
+   Scroll + animation choreography
+============================================================ */
+const track = document.getElementById('hero-track');
+const ovIntro = document.getElementById('ov-intro');
+const ovPrint = document.getElementById('ov-print');
+const ovFinal = document.getElementById('ov-final');
+const scrollHint = document.getElementById('scroll-hint');
+const progressFill = document.getElementById('progress-fill');
+
+let rawP = 0, smoothP = 0;
+let mouseX = 0, mouseY = 0, smX = 0, smY = 0;
+
+function readScroll() {
+  const max = track.offsetHeight - window.innerHeight;
+  rawP = THREE.MathUtils.clamp(window.scrollY / max, 0, 1);
+}
+window.addEventListener('scroll', readScroll, { passive: true });
+window.addEventListener('mousemove', (e) => {
+  mouseX = (e.clientX / window.innerWidth) * 2 - 1;
+  mouseY = (e.clientY / window.innerHeight) * 2 - 1;
+});
+
+const easeIO = (t) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+const sub = (p, a, b) => THREE.MathUtils.clamp((p - a) / (b - a), 0, 1);
+
+/* Phases:
+   0.00–0.34  assembly (staggered fly-in)
+   0.34–0.44  nozzle descends to plate
+   0.44–0.86  printing — layers appear, nozzle rises
+   0.86–1.00  finale — nozzle lifts away, camera pulls back           */
+
+function update(time) {
+  const k = FRAME_INTERVAL ? 0.45 : 0.085; // catch up faster at low frame rates
+  smoothP += (rawP - smoothP) * k;
+  smX += (mouseX - smX) * 0.05;
+  smY += (mouseY - smY) * 0.05;
+  const p = smoothP;
+
+  // --- assembly ---
+  const aP = sub(p, 0, 0.34);
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
+    const e = easeIO(sub(aP, part.t0, part.t1));
+    part.mesh.position.lerpVectors(part.from, part.to, e);
+    // floating bob while a part is still loose
+    part.mesh.position.y += Math.sin(time * 0.0012 + i * 1.7) * 0.12 * (1 - e);
+    part.mesh.rotation.set(part.rot.x * (1 - e), part.rot.y * (1 - e), part.rot.z * (1 - e));
+  }
+  // gentle idle sway before printing starts
+  const sway = (1 - sub(p, 0.3, 0.4));
+  nozzle.rotation.y = Math.sin(time * 0.0005) * 0.12 * sway;
+
+  // --- printing: raise the clip plane to reveal the mini logo bottom-up ---
+  const printP = easeIO(sub(p, 0.44, 0.86));
+  const clipH = PLATE_Y + printP * MINI_H;
+  printPlane.constant = clipH;
+
+  // --- nozzle vertical travel ---
+  const descend = easeIO(sub(p, 0.34, 0.44));
+  const printY = (clipH + 0.12) - TIP_APEX; // apex hovers just above the highest printed layer
+  const liftOff = easeIO(sub(p, 0.84, 0.95));
+  nozzle.position.y = THREE.MathUtils.lerp(0, printY, descend) + liftOff * 2.8;
+  // no floating shadow once the nozzle exits the frame
+  const shadowsOn = liftOff < 0.3;
+  for (const part of parts) part.mesh.castShadow = shadowsOn;
+  // wiggle while actively printing
+  const active = printP > 0.01 && printP < 0.99 ? 1 : 0;
+  nozzle.position.x = Math.sin(printP * Math.PI * 14) * 0.16 * active * (1 - liftOff);
+
+  // finished part slowly spins in the finale
+  const finP = sub(p, 0.88, 1);
+  printGroup.rotation.y = finP * 1.2;
+
+  // --- camera ---
+  const orbit = 0.45 + p * 0.55;
+  const narrow = camera.aspect < 0.8 ? 1.45 : 1; // pull back on portrait screens
+  const radius = (11.0 - easeIO(sub(p, 0, 0.4)) * 2.6 + easeIO(sub(p, 0.86, 1)) * 2.6) * narrow;
+  const height = 2.4 - sub(p, 0.3, 0.5) * 1.1 + easeIO(sub(p, 0.86, 1)) * 1.0;
+  let lookY = THREE.MathUtils.lerp(1.6, -0.35, sub(p, 0.25, 0.55));
+  if (narrow > 1) lookY += 2.7 * (1 - sub(p, 0.25, 0.5)); // keep the model below the copy on phones
+  camera.position.set(
+    Math.sin(orbit) * radius + smX * 0.35,
+    height - smY * 0.25,
+    Math.cos(orbit) * radius
+  );
+  camera.lookAt(0, lookY, 0);
+  // keep the model right of the intro copy on wide screens, recenter as it prints
+  const vw = canvas.clientWidth, vh = canvas.clientHeight;
+  const shift = vw > 720 ? -vw * 0.17 * (1 - easeIO(sub(p, 0.28, 0.52))) : 0;
+  camera.setViewOffset(vw, vh, shift, 0, vw, vh);
+
+  // --- overlays ---
+  const introOp = 1 - sub(p, 0.04, 0.16);
+  const wide = window.innerWidth > 720;
+  ovIntro.style.opacity = introOp;
+  ovIntro.style.transform = wide
+    ? `translateY(calc(-50% - ${sub(p, 0.04, 0.16) * 40}px))`
+    : `translateY(-${sub(p, 0.04, 0.16) * 40}px)`;
+  ovIntro.style.visibility = introOp > 0.01 ? 'visible' : 'hidden';
+
+  const printOp = sub(p, 0.46, 0.54) * (1 - sub(p, 0.78, 0.86));
+  ovPrint.style.opacity = printOp;
+  ovPrint.style.visibility = printOp > 0.01 ? 'visible' : 'hidden';
+
+  const finalOp = sub(p, 0.86, 0.93);
+  ovFinal.style.opacity = finalOp;
+  ovFinal.style.transform = `translateX(-50%) translateY(${(1 - finalOp) * 24}px)`;
+  ovFinal.style.visibility = finalOp > 0.01 ? 'visible' : 'hidden';
+
+  scrollHint.style.opacity = 1 - sub(p, 0.01, 0.06);
+  progressFill.style.height = `${Math.round(p * 100)}%`;
+}
+
+/* ============================================================
+   Resize + loop
+============================================================ */
+function resize() {
+  const w = canvas.clientWidth || window.innerWidth;
+  const h = canvas.clientHeight || window.innerHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize);
+resize();
+readScroll();
+
+// Pause rendering entirely once the hero is scrolled out of view.
+let heroVisible = true;
+new IntersectionObserver((entries) => { heroVisible = entries[0].isIntersecting; })
+  .observe(document.getElementById('hero-stage'));
+
+let lastFrame = 0;
+renderer.setAnimationLoop((time) => {
+  if (!heroVisible) return;
+  if (FRAME_INTERVAL && time - lastFrame < FRAME_INTERVAL) return;
+  lastFrame = time;
+  update(time);
+  renderer.render(scene, camera);
+});
+</script>
+</body>
+</html>
