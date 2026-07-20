@@ -209,6 +209,22 @@
     .mq-set[aria-hidden="true"] { display: none; }
   }
   .follow-lead { font-size: 15px; font-weight: 600; color: var(--muted); margin-bottom: 18px; }
+
+  /* ---------- Interactive printer ---------- */
+  .split { display: grid; grid-template-columns: 1fr 1.1fr; gap: 44px; align-items: center; }
+  .lede { color: var(--muted); font-size: 17px; max-width: 60ch; line-height: 1.6; }
+  .printer-wrap { position: relative; height: 480px; }
+  #printer-scene { width: 100%; height: 100%; display: block; cursor: grab; touch-action: pan-y; }
+  #printer-scene.grabbing { cursor: grabbing; }
+  .spin-hint {
+    position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%);
+    font-size: 11.5px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--muted); pointer-events: none; white-space: nowrap;
+  }
+  @media (max-width: 900px) {
+    .split { grid-template-columns: 1fr; gap: 10px; }
+    .printer-wrap { height: 380px; }
+  }
   .social-row { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
   .social-btn {
     display: inline-flex; align-items: center; gap: 10px; text-decoration: none;
@@ -343,8 +359,16 @@
 </section>
 
 <section class="content" id="materials">
-  <h2>Only high-quality materials</h2>
-  <p>Every print starts with premium, trusted material — chosen for strength, finish, and color that lasts. Tell us how your piece will be used and we'll match the right material to the job.</p>
+  <div class="split">
+    <div>
+      <h2>Only high-quality materials</h2>
+      <p class="lede">Every print starts with premium, trusted material — chosen for strength, finish, and color that lasts. Tell us how your piece will be used and we'll match the right material to the job.</p>
+    </div>
+    <div class="printer-wrap">
+      <canvas id="printer-scene"></canvas>
+      <span class="spin-hint">Drag to spin — fling it fast or slow it down</span>
+    </div>
+  </div>
 </section>
 
 <section class="content" id="contact">
@@ -667,18 +691,160 @@ window.addEventListener('resize', resize);
 resize();
 readScroll();
 
-// Pause rendering entirely once the hero is scrolled out of view.
-let heroVisible = true;
+/* ============================================================
+   Interactive printer turntable (materials section)
+============================================================ */
+const pCanvas = document.getElementById('printer-scene');
+const pRenderer = new THREE.WebGLRenderer({ canvas: pCanvas, antialias: !softwareGL, alpha: true });
+pRenderer.setPixelRatio(softwareGL ? 0.55 : Math.min(window.devicePixelRatio, 2));
+const pScene = new THREE.Scene();
+const pCamera = new THREE.PerspectiveCamera(35, 1, 0.1, 60);
+pCamera.position.set(0, 3.4, 9.6);
+pCamera.lookAt(0, 2.1, 0);
+pScene.add(new THREE.AmbientLight(0xffffff, 0.75));
+const pKey = new THREE.DirectionalLight(0xffffff, 1.4);
+pKey.position.set(4, 7, 5);
+pScene.add(pKey);
+const pRim = new THREE.DirectionalLight(0xbdd7ff, 0.6);
+pRim.position.set(-5, 3, -4);
+pScene.add(pRim);
+
+const printer = new THREE.Group();
+pScene.add(printer);
+function block(w, h, d, color, x, y, z, parent = printer) {
+  const m = new THREE.Mesh(
+    new THREE.BoxGeometry(w, h, d),
+    new THREE.MeshStandardMaterial({ color, roughness: 0.42, metalness: 0.08 })
+  );
+  m.position.set(x, y, z);
+  parent.add(m);
+  return m;
+}
+// frame
+block(3.2, 0.5, 2.6, 0x1b2a5e, 0, 0.25, 0.2);        // base
+block(2.3, 0.1, 2.1, 0x27407a, 0, 0.55, 0.35);       // heated bed
+block(2.1, 0.04, 1.9, 0x8fa7d6, 0, 0.62, 0.35);      // build surface
+block(0.75, 0.5, 0.1, 0x16224d, 1.05, 0.62, 1.62).rotation.x = -0.35; // control screen
+block(0.2, 3.1, 0.2, 0x2c3c70, -1.4, 2.05, -0.85);   // left rail
+block(0.2, 3.1, 0.2, 0x2c3c70, 1.4, 2.05, -0.85);    // right rail
+block(3.0, 0.22, 0.22, 0x2c3c70, 0, 3.7, -0.85);     // crossbar
+block(0.14, 0.55, 0.14, 0x2c3c70, 0, 4.0, -0.85);    // spool holder
+
+// moving gantry: bar + carriage + hotend
+const gantry = new THREE.Group();
+printer.add(gantry);
+block(3.0, 0.16, 0.16, 0x41548f, 0, 0, -0.85, gantry);
+const carriage = new THREE.Group();
+gantry.add(carriage);
+block(0.4, 0.45, 0.35, 0x1b2a5e, 0, 0, -0.85, carriage);
+block(0.13, 0.13, 1.05, 0x41548f, 0, 0.05, -0.35, carriage);
+block(0.28, 0.34, 0.28, 0x27407a, 0, -0.02, 0.2, carriage);
+const nozzleTip = new THREE.Mesh(
+  new THREE.ConeGeometry(0.09, 0.2, 20),
+  new THREE.MeshStandardMaterial({ color: 0xd8b25a, roughness: 0.3, metalness: 0.6 })
+);
+nozzleTip.rotation.z = Math.PI;
+nozzleTip.position.set(0, -0.29, 0.2);
+carriage.add(nozzleTip);
+
+// the little print on the bed — rainbow, of course
+const miniGeom = new THREE.BoxGeometry(0.85, 0.45, 0.85, 1, 8, 1);
+paintVertices(miniGeom, (v) => rainbowAt((v.y + 0.225) / 0.45));
+const miniPrint = new THREE.Mesh(miniGeom, vertexMat({ roughness: 0.4 }));
+miniPrint.position.set(0, 0.845, 0.35);
+printer.add(miniPrint);
+
+// rainbow filament spool up top
+const spool = new THREE.Group();
+spool.position.set(0, 4.45, -0.85);
+printer.add(spool);
+const flangeGeom = new THREE.CylinderGeometry(0.62, 0.62, 0.05, 36);
+flangeGeom.rotateX(Math.PI / 2);
+for (const z of [-0.21, 0.21]) {
+  const f = new THREE.Mesh(flangeGeom, new THREE.MeshStandardMaterial({ color: 0x1b2a5e, roughness: 0.4 }));
+  f.position.z = z;
+  spool.add(f);
+}
+const filGeom = new THREE.CylinderGeometry(0.5, 0.5, 0.36, 48);
+filGeom.rotateX(Math.PI / 2);
+paintVertices(filGeom, (v) => rainbowAt(Math.atan2(v.y, v.x) / (Math.PI * 2) + 0.5));
+spool.add(new THREE.Mesh(filGeom, vertexMat({ roughness: 0.5 })));
+
+/* Turntable physics: idles at a slow spin; dragging flings it faster
+   (or against the spin), then it eases back to the idle speed. */
+const BASE_SPIN = 0.45;
+let spinVel = BASE_SPIN, dragging = false, lastPX = 0, lastMoveT = 0;
+pCanvas.addEventListener('pointerdown', (e) => {
+  dragging = true;
+  lastPX = e.clientX;
+  lastMoveT = performance.now();
+  pCanvas.setPointerCapture(e.pointerId);
+  pCanvas.classList.add('grabbing');
+});
+pCanvas.addEventListener('pointermove', (e) => {
+  if (!dragging) return;
+  const now = performance.now();
+  const dx = e.clientX - lastPX;
+  const dtm = Math.max((now - lastMoveT) / 1000, 0.008);
+  printer.rotation.y += dx * 0.012;
+  spinVel = THREE.MathUtils.clamp((dx * 0.012) / dtm, -14, 14);
+  lastPX = e.clientX;
+  lastMoveT = now;
+});
+const endDrag = () => { dragging = false; pCanvas.classList.remove('grabbing'); };
+pCanvas.addEventListener('pointerup', endDrag);
+pCanvas.addEventListener('pointercancel', endDrag);
+
+function updatePrinter(time, dt) {
+  if (!dragging) {
+    printer.rotation.y += spinVel * dt;
+    spinVel += (BASE_SPIN - spinVel) * Math.min(1, dt * 0.4);
+  }
+  gantry.position.y = 2.1 + Math.sin(time * 0.0004) * 0.7;
+  carriage.position.x = Math.sin(time * 0.0011) * 1.05;
+  spool.rotation.z -= dt * (0.5 + Math.abs(spinVel) * 0.12);
+}
+
+function resizePrinter() {
+  const w = pCanvas.clientWidth || 1, h = pCanvas.clientHeight || 1;
+  pRenderer.setSize(w, h, false);
+  pCamera.aspect = w / h;
+  pCamera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resizePrinter);
+resizePrinter();
+
+/* ============================================================
+   Shared render loop — each scene renders only while on screen
+============================================================ */
+let heroVisible = true, printerVisible = false;
 new IntersectionObserver((entries) => { heroVisible = entries[0].isIntersecting; })
   .observe(document.getElementById('hero-stage'));
+new IntersectionObserver((entries) => { printerVisible = entries[0].isIntersecting; })
+  .observe(pCanvas);
 
-let lastFrame = 0;
+// manual single-frame hook so automated checks can render while the tab is hidden
+window.__tick = (t = performance.now()) => {
+  update(t);
+  renderer.render(scene, camera);
+  updatePrinter(t, 0.016);
+  pRenderer.render(pScene, pCamera);
+};
+
+let lastFrame = 0, lastT = 0;
 renderer.setAnimationLoop((time) => {
-  if (!heroVisible) return;
   if (FRAME_INTERVAL && time - lastFrame < FRAME_INTERVAL) return;
   lastFrame = time;
-  update(time);
-  renderer.render(scene, camera);
+  const dt = Math.min((time - lastT) / 1000 || 0.016, 0.1);
+  lastT = time;
+  if (heroVisible) {
+    update(time);
+    renderer.render(scene, camera);
+  }
+  if (printerVisible) {
+    updatePrinter(time, dt);
+    pRenderer.render(pScene, pCamera);
+  }
 });
 </script>
 </body>
