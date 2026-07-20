@@ -148,7 +148,7 @@
   #build-progress .label { font-size: 11.5px; font-weight: 700; color: var(--muted); letter-spacing: 0.1em; writing-mode: vertical-rl; }
 
   /* ---------- Content sections ---------- */
-  section.content { padding: 110px 6vw; max-width: 1200px; margin: 0 auto; }
+  section.content { padding: 60px 6vw; max-width: 1200px; margin: 0 auto; }
   section.content h2 { font-size: clamp(28px, 3.2vw, 44px); color: var(--navy); letter-spacing: -0.02em; margin-bottom: 14px; }
   section.content > p { color: var(--muted); font-size: 17px; max-width: 60ch; line-height: 1.6; margin-bottom: 44px; }
   .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 22px; }
@@ -241,7 +241,7 @@
     position: relative;
     background: linear-gradient(180deg, #1b2a5e, #131f49);
     color: #fff;
-    padding: 96px 6vw 84px;
+    padding: 68px 6vw 64px;
     text-align: center;
     overflow: hidden;
   }
@@ -814,8 +814,8 @@ const pRenderer = new THREE.WebGLRenderer({ canvas: pCanvas, antialias: !softwar
 pRenderer.setPixelRatio(softwareGL ? 0.55 : Math.min(window.devicePixelRatio, 2));
 const pScene = new THREE.Scene();
 const pCamera = new THREE.PerspectiveCamera(35, 1, 0.1, 60);
-pCamera.position.set(0, 3.4, 9.6);
-pCamera.lookAt(0, 2.1, 0);
+pCamera.position.set(0, 3.5, 10.3);
+pCamera.lookAt(0, 2.4, 0);
 pScene.add(new THREE.AmbientLight(0xffffff, 0.75));
 const pKey = new THREE.DirectionalLight(0xffffff, 1.4);
 pKey.position.set(4, 7, 5);
