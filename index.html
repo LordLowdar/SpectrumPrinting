@@ -236,6 +236,71 @@
   .social-btn.insta { background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); }
   .social-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
 
+  /* ---------- CTA band ---------- */
+  .cta-band {
+    position: relative;
+    background: linear-gradient(180deg, #1b2a5e, #131f49);
+    color: #fff;
+    padding: 96px 6vw 84px;
+    text-align: center;
+    overflow: hidden;
+  }
+  .cta-band::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 5px;
+    background: linear-gradient(90deg, var(--red), var(--orange), var(--yellow), var(--green), var(--blue));
+  }
+  .cta-inner { max-width: 860px; margin: 0 auto; position: relative; }
+  .cta-eyebrow {
+    display: inline-block; font-size: 12.5px; font-weight: 700;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    color: rgba(255,255,255,0.75);
+    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.18);
+    padding: 6px 16px; border-radius: 999px; margin-bottom: 22px;
+  }
+  .cta-band h2 {
+    font-size: clamp(32px, 4.2vw, 54px); line-height: 1.1;
+    letter-spacing: -0.02em; margin-bottom: 18px;
+  }
+  .cta-grad {
+    background: linear-gradient(90deg, var(--red), var(--orange), var(--yellow), var(--green), #6ec1ff);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .cta-sub {
+    font-size: 17.5px; line-height: 1.6; color: rgba(255,255,255,0.78);
+    max-width: 54ch; margin: 0 auto 46px;
+  }
+  .cta-steps {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px;
+    margin-bottom: 48px; text-align: left;
+  }
+  .cta-step {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 16px; padding: 22px 22px 20px;
+  }
+  .step-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 34px; height: 34px; border-radius: 50%;
+    font-weight: 800; font-size: 16px; color: #fff;
+    margin-bottom: 14px;
+  }
+  .cta-step h3 { font-size: 17px; margin-bottom: 6px; }
+  .cta-step p { font-size: 14.5px; line-height: 1.5; color: rgba(255,255,255,0.72); }
+  .cta-mail {
+    display: inline-block; text-decoration: none;
+    background: #fff; color: var(--navy);
+    font-weight: 700; font-size: clamp(16px, 2vw, 20px);
+    padding: 18px 38px; border-radius: 14px;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.35);
+    transition: transform .15s, box-shadow .15s;
+  }
+  .cta-mail:hover { transform: translateY(-3px); box-shadow: 0 18px 46px rgba(0,0,0,0.45); }
+  .cta-social { margin-top: 22px; font-size: 14.5px; color: rgba(255,255,255,0.65); }
+  .cta-social a { color: #fff; font-weight: 600; }
+  @media (max-width: 760px) {
+    .cta-steps { grid-template-columns: 1fr; }
+  }
+
   footer {
     border-top: 1px solid rgba(23,37,92,0.08);
     padding: 36px 6vw; text-align: center; color: var(--muted); font-size: 14px;
@@ -371,10 +436,31 @@
   </div>
 </section>
 
-<section class="content" id="contact">
-  <h2>Get a quote</h2>
-  <p>Have an idea or a file ready to print? Send it over and we'll get back to you within a day.</p>
-  <a class="btn btn-primary" href="mailto:hello@spectrum3dprinting.com">hello@spectrum3dprinting.com</a>
+<section id="contact" class="cta-band">
+  <div class="cta-inner">
+    <span class="cta-eyebrow">Ready when you are</span>
+    <h2>Let's make something<br><span class="cta-grad">worth showing off</span>.</h2>
+    <p class="cta-sub">A sketch on a napkin, a photo, a half-finished file — send whatever you've got. You'll hear back within a day with a plan and a price.</p>
+    <div class="cta-steps">
+      <div class="cta-step">
+        <span class="step-num" style="background: linear-gradient(135deg, var(--red), var(--orange));">1</span>
+        <h3>Send it over</h3>
+        <p>Email your idea or file — rough is totally fine.</p>
+      </div>
+      <div class="cta-step">
+        <span class="step-num" style="background: linear-gradient(135deg, var(--yellow), var(--green));">2</span>
+        <h3>We dial it in</h3>
+        <p>Material, color, and details matched to how it'll be used.</p>
+      </div>
+      <div class="cta-step">
+        <span class="step-num" style="background: linear-gradient(135deg, var(--green), var(--blue));">3</span>
+        <h3>Hold it in your hands</h3>
+        <p>Printed with care and on its way to you in days.</p>
+      </div>
+    </div>
+    <a class="cta-mail" href="mailto:hello@spectrum3dprinting.com">hello@spectrum3dprinting.com</a>
+    <p class="cta-social">or DM <a href="https://www.tiktok.com/@spectrumprinting530" target="_blank" rel="noopener">@spectrumprinting530</a> on TikTok &amp; <a href="https://www.instagram.com/spectrumprinting530/" target="_blank" rel="noopener">Instagram</a></p>
+  </div>
 </section>
 
 <footer>© 2026 Spectrum 3D Printing. All rights reserved.</footer>
