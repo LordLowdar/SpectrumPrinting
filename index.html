@@ -476,6 +476,8 @@
 
 <script type="module">
 import * as THREE from 'three';
+import { FontLoader } from 'three/addons/loaders/FontLoader.js';
+import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
 
 /* ============================================================
    Scene setup
@@ -631,23 +633,51 @@ ground.position.y = PLATE_Y - 0.17;
 ground.receiveShadow = true;
 scene.add(ground);
 
-// The printed part is the logo itself: a mini replica of the nozzle mark,
-// revealed bottom-up by a clipping plane as if being printed layer by layer.
+// The printed part is the company wordmark — "SPECTRUM / 3D PRINTING" —
+// standing on the plate, revealed bottom-up by a clipping plane as it prints.
 renderer.localClippingEnabled = true;
 const printPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), PLATE_Y);
-const MINI_SCALE = 0.6;
-const MINI_H = 1.55; // world-space height of the reveal travel
+let MINI_H = 1.45; // world-space height of the reveal travel (refined once the font loads)
 const printGroup = new THREE.Group();
 scene.add(printGroup);
-for (const [geom, y] of [[topGeom, 2.35], [step1Geom, 1.62], [step2Geom, 1.18], [tipGeom, 0.68]]) {
-  const m = new THREE.Mesh(geom, vertexMat({ roughness: 0.45, clippingPlanes: [printPlane], clipShadows: true, side: THREE.DoubleSide }));
-  m.position.y = y;
-  m.castShadow = true;
-  printGroup.add(m);
-}
-printGroup.scale.setScalar(MINI_SCALE);
-// rest the mini logo's cone tip on the plate, just like the mark in the logo
-printGroup.position.y = PLATE_Y - TIP_APEX * MINI_SCALE;
+window.__dbg2 = { printGroup, printPlane, heroCamera: camera, MINI_H: () => MINI_H };
+const wordmarkMat = () => vertexMat({
+  roughness: 0.45, clippingPlanes: [printPlane], clipShadows: true, side: THREE.DoubleSide
+});
+new FontLoader().load(
+  'https://cdn.jsdelivr.net/npm/three@0.166.1/examples/fonts/helvetiker_bold.typeface.json',
+  (font) => {
+    const makeLine = (text, size) => {
+      const g = new TextGeometry(text, {
+        font, size, depth: 0.22, curveSegments: 6,
+        bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.012, bevelSegments: 2
+      });
+      g.computeBoundingBox();
+      const bb = g.boundingBox;
+      g.translate(-(bb.min.x + bb.max.x) / 2, 0, -(bb.min.z + bb.max.z) / 2);
+      g.computeBoundingBox();
+      return g;
+    };
+    const topGeo = makeLine('SPECTRUM', 0.62);
+    const tb = topGeo.boundingBox;
+    paintVertices(topGeo, (v) => rainbowAt((v.x - tb.min.x) / (tb.max.x - tb.min.x)));
+    const topMesh = new THREE.Mesh(topGeo, wordmarkMat());
+    const subGeo = makeLine('3D PRINTING', 0.34);
+    paintVertices(subGeo, () => new THREE.Color(0xf2f5fb));
+    const subMesh = new THREE.Mesh(subGeo, wordmarkMat());
+    topMesh.castShadow = subMesh.castShadow = true;
+    const subH = 0.34, gap = 0.24;
+    subMesh.position.y = 0;
+    topMesh.position.y = subH + gap;
+    const wordmark = new THREE.Group();
+    wordmark.add(topMesh, subMesh);
+    const scaleAll = 3.9 / (tb.max.x - tb.min.x);
+    wordmark.scale.setScalar(scaleAll);
+    wordmark.position.y = PLATE_Y + 0.02;
+    printGroup.add(wordmark);
+    MINI_H = (subH + gap + tb.max.y) * scaleAll + 0.18;
+  }
+);
 
 /* ============================================================
    Scroll + animation choreography
@@ -717,11 +747,10 @@ function update(time) {
   for (const part of parts) part.mesh.castShadow = shadowsOn;
   // wiggle while actively printing
   const active = printP > 0.01 && printP < 0.99 ? 1 : 0;
-  nozzle.position.x = Math.sin(printP * Math.PI * 14) * 0.16 * active * (1 - liftOff);
+  nozzle.position.x = Math.sin(printP * Math.PI * 14) * 0.85 * active * (1 - liftOff);
 
-  // finished part slowly spins in the finale
-  const finP = sub(p, 0.88, 1);
-  printGroup.rotation.y = finP * 1.2;
+  // keep the wordmark angled toward the orbiting camera so it stays readable
+  printGroup.rotation.y = 0.45 + p * 0.55;
 
   // --- camera ---
   const orbit = 0.45 + p * 0.55;
