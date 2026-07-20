@@ -747,12 +747,26 @@ nozzleTip.rotation.z = Math.PI;
 nozzleTip.position.set(0, -0.29, 0.2);
 carriage.add(nozzleTip);
 
-// the little print on the bed — rainbow, of course
-const miniGeom = new THREE.BoxGeometry(0.85, 0.45, 0.85, 1, 8, 1);
-paintVertices(miniGeom, (v) => rainbowAt((v.y + 0.225) / 0.45));
-const miniPrint = new THREE.Mesh(miniGeom, vertexMat({ roughness: 0.4 }));
-miniPrint.position.set(0, 0.845, 0.35);
-printer.add(miniPrint);
+// the piece on the bed — a tiny copy of the logo itself
+// (brighter flat blues on the throat so it doesn't vanish against the navy frame)
+const bedLogo = new THREE.Group();
+const bedParts = [
+  [topGeom, 2.35, vertexMat({ roughness: 0.45 })],
+  [step1Geom, 1.62, new THREE.MeshStandardMaterial({ color: 0x4fa8e8, roughness: 0.45 })],
+  [step2Geom, 1.18, new THREE.MeshStandardMaterial({ color: 0x2f80d0, roughness: 0.45 })],
+  [tipGeom, 0.68, new THREE.MeshStandardMaterial({ color: 0x1d5fae, roughness: 0.45 })],
+];
+for (const [geom, y, mat] of bedParts) {
+  const m = new THREE.Mesh(geom, mat);
+  m.position.y = y;
+  bedLogo.add(m);
+}
+window.__dbg = { printer, bedLogo, gantry, pScene, pCamera, pRenderer };
+const BED_LOGO_SCALE = 0.42;
+bedLogo.scale.setScalar(BED_LOGO_SCALE);
+bedLogo.position.set(0, 0.62 - TIP_APEX * BED_LOGO_SCALE, 0.35);
+bedLogo.rotation.y = 0.5;
+printer.add(bedLogo);
 
 // rainbow filament spool up top
 const spool = new THREE.Group();
@@ -800,7 +814,7 @@ function updatePrinter(time, dt) {
     printer.rotation.y += spinVel * dt;
     spinVel += (BASE_SPIN - spinVel) * Math.min(1, dt * 0.4);
   }
-  gantry.position.y = 2.1 + Math.sin(time * 0.0004) * 0.7;
+  gantry.position.y = 2.75 + Math.sin(time * 0.0004) * 0.35;
   carriage.position.x = Math.sin(time * 0.0011) * 1.05;
   spool.rotation.z -= dt * (0.5 + Math.abs(spinVel) * 0.12);
 }
